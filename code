@@ -27,6 +27,7 @@ int height(struct Node *N) // Finds height of subtree rooted at node N
   return N->height;
 }
 
+
 struct Node *newNode(int val) // Creates new node for AVL Tree
 {
   struct Node *Node = malloc(sizeof(struct Node));
