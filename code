@@ -1,0 +1,547 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+int RBrotations=0,AVLrotations=0;
+
+
+// Functions and structures for AVL Trees
+
+struct Node // Node for AVL Tree
+{
+  int val;
+  struct Node *Left;
+  struct Node *Right;
+  int height;
+};
+
+int max(int a, int b) // Find maximum of two numbers
+{
+  return (a > b) ? a : b;
+}
+
+int height(struct Node *N) // Finds height of subtree rooted at node N
+{
+  if (N == NULL)
+    return 0;
+  return N->height;
+}
+
+struct Node *newNode(int val) // Creates new node for AVL Tree
+{
+  struct Node *Node = malloc(sizeof(struct Node));
+  Node->val = val;
+  Node->Left = NULL;
+  Node->Right = NULL;
+  Node->height = 1;
+  return (Node);
+}
+
+struct Node *AVL_RightRotate(struct Node *y) // Right rotation in AVL Tree
+{
+  struct Node *x = y->Left;
+  struct Node *T2 = x->Right;
+  x->Right = y;
+  y->Left = T2;
+  y->height = max(height(y->Left), height(y->Right)) + 1;
+  x->height = max(height(x->Left), height(x->Right)) + 1;
+  AVLrotations++;
+  return x;
+}
+
+struct Node *AVL_LeftRotate(struct Node *x) // Left rotation in AVL Tree
+{
+  struct Node *y = x->Right;
+  struct Node *T2 = y->Left;
+  y->Left = x;
+  x->Right = T2;
+  x->height = max(height(x->Left), height(x->Right)) + 1;
+  y->height = max(height(y->Left), height(y->Right)) + 1;
+  AVLrotations++;
+  return y;
+}
+
+struct Node* AVL_Search(struct Node *x,int val)
+{
+    if(val<x->val&&x->Left)
+        AVL_Search(x->Left,val);
+    else if(val>x->val&&x->Right)
+        AVL_Search(x->Right,val);
+    else if(val==x->val)
+        return x;
+    else
+        return NULL;
+}
+
+int AVL_BalanceFactor(struct Node *N) // Balance factor of AVL Tree
+{
+  if (N == NULL)
+    return 0;
+  return height(N->Left) - height(N->Right);
+}
+
+struct Node *AVL_Insert(struct Node *Node, int val) // Inserts node into AVL Tree
+{
+  if (Node == NULL)
+    return (newNode(val));
+  if (val < Node->val)
+    Node->Left = AVL_Insert(Node->Left, val);
+  else if (val > Node->val)
+    Node->Right = AVL_Insert(Node->Right, val);
+  else
+    return Node;
+    // Balance the AVL Tree
+  Node->height = 1 + max(height(Node->Left),height(Node->Right));
+  int balance = AVL_BalanceFactor(Node);
+  if (balance > 1 && val < Node->Left->val)
+    return AVL_RightRotate(Node);
+  if (balance < -1 && val > Node->Right->val)
+    return AVL_LeftRotate(Node);
+  if (balance > 1 && val > Node->Left->val)
+    {
+    Node->Left = AVL_LeftRotate(Node->Left);
+    return AVL_RightRotate(Node);
+    }
+  if (balance < -1 && val < Node->Right->val)
+    {
+    Node->Right = AVL_RightRotate(Node->Right);
+    return AVL_LeftRotate(Node);
+    }
+  return Node;
+}
+
+struct Node *AVL_Minimum(struct Node *Node) // Returns successor of deleted node in AVL Tree
+{
+  struct Node *current = Node;
+  while (current->Left != NULL)
+    current = current->Left;
+  return current;
+}
+
+struct Node *AVL_Delete(struct Node *root, int val) // Deletes node in AVL Tree
+{
+  if (root == NULL)
+    return root;
+  if (val < root->val)
+    root->Left = AVL_Delete(root->Left, val);
+  else if (val > root->val)
+    root->Right = AVL_Delete(root->Right, val);
+  else {
+    if ((root->Left == NULL) || (root->Right == NULL))
+        {
+      struct Node *temp = root->Left ? root->Left : root->Right;
+      if (temp == NULL)
+      {
+        temp = root;
+        root = NULL;
+      }
+      else
+        *root = *temp;
+      free(temp);
+        }
+        else
+        {
+      struct Node *temp = AVL_Minimum(root->Right);
+      root->val = temp->val;
+      root->Right = AVL_Delete(root->Right, temp->val);
+        }
+  }
+  if (root == NULL)
+    return root;
+  // Balance the tree
+  root->height = 1 + max(height(root->Left),height(root->Right));
+  int balance = AVL_BalanceFactor(root);
+  if (balance > 1 && AVL_BalanceFactor(root->Left) >= 0)
+    return AVL_RightRotate(root);
+  if (balance > 1 && AVL_BalanceFactor(root->Left) < 0)
+    {
+    root->Left = AVL_LeftRotate(root->Left);
+    return AVL_RightRotate(root);
+    }
+  if (balance < -1 && AVL_BalanceFactor(root->Right) <= 0)
+    return AVL_LeftRotate(root);
+  if (balance < -1 && AVL_BalanceFactor(root->Right) > 0)
+    {
+    root->Right = AVL_RightRotate(root->Right);
+    return AVL_LeftRotate(root);
+    }
+  return root;
+}
+
+void AVL_Inorder(struct Node *root)
+{
+  if (root != NULL)
+  {
+    AVL_Inorder(root->Left);
+    printf("%d ", root->val);
+    AVL_Inorder(root->Right);
+  }
+}
+
+// Functions and structures for RB Trees
+
+enum COLOR {Red, Black}; // Color values for nodes
+
+typedef struct RB_Node // Node for RB Tree
+{
+int data;
+struct RB_Node *left,*right,*parent;
+enum COLOR color;
+}RB_Node;
+
+typedef struct RBTree // RB Tree
+{
+RB_Node *root;
+RB_Node *NIL;
+}RBTree;
+
+RB_Node* newRB_Node(int data) // Creates a new node for RB Tree
+{
+RB_Node*n = malloc(sizeof(RB_Node));
+n->left = NULL;
+n->right = NULL;
+n->parent = NULL;
+n->data = data;
+n->color = Red;
+return n;
+}
+
+RBTree* new_RBTree() // Creates a new RB Tree
+{
+RBTree *t = malloc(sizeof(RBTree));
+RB_Node *nil_RB_Node = malloc(sizeof(RB_Node));
+nil_RB_Node->left = NULL;
+nil_RB_Node->right = NULL;
+nil_RB_Node->parent = NULL;
+nil_RB_Node->color = Black;
+nil_RB_Node->data = 0;
+t->NIL = nil_RB_Node;
+t->root = t->NIL;
+return t;
+}
+
+void RB_LeftRotate(RBTree *t, RB_Node *x) // Left rotation in RB Tree
+{
+RB_Node *y = x->right;
+x->right = y->left;
+if(y->left != t->NIL)
+    y->left->parent = x;
+y->parent = x->parent;
+if(x->parent == t->NIL) //x is root
+    t->root = y;
+else if(x == x->parent->left) //x is left child
+    x->parent->left = y;
+else //x is right child
+    x->parent->right = y;
+y->left = x;
+x->parent = y;
+RBrotations++;
+}
+
+void RB_RightRotate(RBTree *t, RB_Node *x) // Right rotation in RB Tree
+{
+RB_Node *y = x->left;
+x->left = y->right;
+if(y->right != t->NIL)
+    y->right->parent = x;
+y->parent = x->parent;
+if(x->parent == t->NIL) //x is root
+    t->root = y;
+else if(x == x->parent->right) //x is left child
+    x->parent->right = y;
+else //x is right child
+    x->parent->left = y;
+y->right = x;
+x->parent = y;
+RBrotations++;
+}
+
+RB_Node* RB_Search(RBTree *t,RB_Node *x,int val) // Search for an element in RB Tree
+{
+    if(val<x->data&&x->left!=t->NIL)
+        RB_Search(t,x->left,val);
+    else if(val>x->data&&x->right!=t->NIL)
+        RB_Search(t,x->right,val);
+    else if(val==x->data)
+        return x;
+    else
+        return t->NIL;
+}
+
+void RB_InsertFix(RBTree *t, RB_Node *z) // Recoloring and balancing after insertion in RB Tree
+{
+while(z->parent->color == Red)
+    {
+    if(z->parent == z->parent->parent->left) // z.parent is the left child
+    {
+    RB_Node *y = z->parent->parent->right; // Uncle of z
+    if(y->color == Red) // Uncle of z is red, so only recoloring is required
+        {
+        z->parent->color = Black;
+        y->color = Black;
+        z->parent->parent->color = Red;
+        z = z->parent->parent;
+        }
+    else
+        {
+        if(z == z->parent->right) // Node is the right child of its parent, so left-rotation is required
+            {
+            z = z->parent;
+            RB_LeftRotate(t, z);
+            }
+        z->parent->color = Black; // Node is the left child of its parent, so right-rotation is required
+        z->parent->parent->color = Red;
+        RB_RightRotate(t, z->parent->parent);
+        }
+  }
+  else // z.parent is the right child
+    {
+    RB_Node *y = z->parent->parent->left; // Uncle of z
+    if(y->color == Red) // Uncle of z is red, so only recoloring is required
+        {
+        z->parent->color = Black;
+        y->color = Black;
+        z->parent->parent->color = Red;
+        z = z->parent->parent;
+        }
+    else
+        {
+        if(z == z->parent->left) // Node is the left child of its parent and so right-rotation is required
+        {
+        z = z->parent;
+        RB_RightRotate(t, z);
+        }
+        z->parent->color = Black; // Node is the right child of its parent and so left-rotation is required
+        z->parent->parent->color = Red;
+        RB_LeftRotate(t, z->parent->parent);
+    }
+  }
+}
+t->root->color = Black;
+}
+
+void RB_Insert(RBTree *t, int val) // Inserts a node into RB Tree
+{
+RB_Node *z=newRB_Node(val);
+RB_Node *y = t->NIL;
+RB_Node *ptr = t->root;
+while(ptr != t->NIL)
+{
+  y = ptr;
+  if(z->data < ptr->data)
+    ptr = ptr->left;
+  else if(z->data > ptr->data)
+    ptr = ptr->right;
+  else
+    return;
+}
+z->parent = y;
+if(y == t->NIL) // Newly added node is root
+    t->root = z;
+else if(z->data < y->data) // Data of child is less than its parent, left child
+    y->left = z;
+else
+    y->right = z;
+z->right = t->NIL;
+z->left = t->NIL;
+RB_InsertFix(t, z); // Balancing tree after insertion of node
+}
+
+void RB_Transplant(RBTree *t, RB_Node *u, RB_Node *v) // Transplants the successor to the deleted node in RB Tree
+{
+if(u->parent == t->NIL)
+    t->root = v;
+else if(u == u->parent->left)
+    u->parent->left = v;
+else
+    u->parent->right = v;
+v->parent = u->parent;
+}
+
+RB_Node* RB_Minimum(RBTree *t, RB_Node *x)
+{
+while(x->left != t->NIL)
+    x = x->left;
+return x;
+}
+
+void RB_DeleteFix(RBTree *t, RB_Node *x) // Recoloring and balancing after deletion from RB Tree
+{
+while(x != t->root && x->color == Black)
+    {
+    if(x == x->parent->left)
+        {
+        RB_Node *w = x->parent->right;
+        if(w->color == Red)
+            {
+            w->color = Black;
+            x->parent->color = Red;
+            RB_LeftRotate(t, x->parent);
+            w = x->parent->right;
+            }
+        if(w->left->color == Black && w->right->color == Black)
+            {
+            w->color = Red;
+            x = x->parent;
+            }
+        else
+            {
+            if(w->right->color == Black)
+                {
+                w->left->color = Black;
+                w->color = Red;
+                RB_RightRotate(t, w);
+                w = x->parent->right;
+                }
+            w->color = x->parent->color;
+            x->parent->color = Black;
+            w->right->color = Black;
+            RB_LeftRotate(t, x->parent);
+            x = t->root;
+            }
+        }
+    else
+        {
+        RB_Node *w = x->parent->left;
+        if(w->color == Red)
+            {
+            w->color = Black;
+            x->parent->color = Red;
+            RB_RightRotate(t, x->parent);
+            w = x->parent->left;
+            }
+        if(w->right->color == Black && w->left->color == Black)
+            {
+            w->color = Red;
+            x = x->parent;
+            }
+    else
+            {
+            if(w->left->color == Black)
+                {
+                w->right->color = Black;
+                w->color = Red;
+                RB_LeftRotate(t, w);
+                w = x->parent->left;
+                }
+            w->color = x->parent->color;
+            x->parent->color = Black;
+            w->left->color = Black;
+            RB_RightRotate(t, x->parent);
+            x = t->root;
+            }
+        }
+    }
+x->color = Black;
+}
+
+void RB_Delete(RBTree *t, int val) // Deletes a node from RB Tree
+{
+RB_Node *z=RB_Search(t,t->root,val);
+RB_Node *y = z;
+RB_Node *x;
+enum COLOR color = y->color;
+if(z->left == t->NIL)
+{
+  x = z->right;
+  RB_Transplant(t, z, z->right);
+}
+else if(z->right == t->NIL)
+{
+  x = z->left;
+  RB_Transplant(t, z, z->left);
+}
+else
+{
+  y = RB_Minimum(t, z->right);
+  color = y->color;
+  x = y->right;
+  if(y->parent == z)
+    x->parent = z;
+  else
+  {
+    RB_Transplant(t, y, y->right);
+    y->right = z->right;
+    y->right->parent = y;
+  }
+  RB_Transplant(t, z, y);
+  y->left = z->left;
+  y->left->parent = y;
+  y->color = z->color;
+}
+if(color == Black)
+  RB_DeleteFix(t, x);
+printf("Element deleted successfully!\n");
+}
+
+void RB_Inorder(RBTree *t, RB_Node *x) // Inorder traversal of RB Tree
+{
+if(x != t->NIL)
+{
+  RB_Inorder(t, x->left);
+  printf("%d ", x->data);
+  RB_Inorder(t, x->right);
+}
+}
+
+int main()
+{
+RBTree *t = new_RBTree();
+struct Node* root = NULL;
+char ch='Y';
+    while(ch=='Y')
+    {
+        int choice,n,ele;
+        printf("Enter your choice:\n1. Insert elements\n2. Delete an element\n3. Search for an element\n4. Inorder Traversal of RB tree\n5. Exit\nEnter your choice: ");
+        scanf("%d",&choice);
+        printf("\n");
+        switch(choice)
+        {
+            case 1: printf("Inserting values....\n");
+                    FILE *file=fopen("input.txt","r");
+                    while(!feof(file))
+                    {
+                        fscanf(file,"%d",&ele);
+                        RB_Insert(t,ele); // Inserting new RB Tree node
+                        root=AVL_Insert(root,ele); // Inserting new AVL Tree node
+                    }
+                    printf("Element(s) inserted successfully!\n");
+                    printf("Total rotations: RB Tree-%d AVL Tree-%d\n",RBrotations,AVLrotations); // Show total rotations done by both trees
+                    break;
+            case 2: printf("Enter element to be deleted: ");
+                    scanf("%d",&ele);
+                    RB_Delete(t,ele); // Deleting node form RB Tree
+                    AVL_Delete(root,ele); // Deleting node from AVL Tree
+                    printf("\nElement deleted successfully!\n");
+                    printf("Total rotations: RB Tree-%d AVL Tree-%d\n",RBrotations,AVLrotations); // Show total rotations done by both trees
+                    break;
+            case 3: printf("Enter element to be searched for: ");
+                    scanf("%d",&ele);
+                    RB_Node *rbptr=RB_Search(t,t->root,ele); // Search for element in RB Tree
+                    struct Node *avlptr=AVL_Search(root,ele); // Search for element in AVL Tree
+                    if(rbptr!=t->NIL)
+                        printf("Element found in RB Tree!\n");
+                    else
+                        printf("Element not found in RB Tree!\n");
+                    if(avlptr)
+                        printf("Element found in AVL Tree!\n");
+                    else
+                        printf("Element not found in AVL Tree!\n");
+                    break;
+            case 4: printf("In-order traversal:\nRB tree: ");
+                    RB_Inorder(t,t->root); // Inorder traversal of RB Tree
+                    printf("\nAVL tree: ");
+                    AVL_Inorder(root); // Inorder traversal of AVL Tree
+                    break;
+            case 5: printf("\nExiting...");
+                    exit(0);
+            default:printf("Invalid choice!\n");
+                    break;
+        }
+        printf("\nWant to do more operations?(y or Y for yes/Any other character for no): ");
+        scanf(" %c",&ch);
+        ch=toupper(ch);
+    }
+    printf("\nExiting...\n");
+return 0;
+}
